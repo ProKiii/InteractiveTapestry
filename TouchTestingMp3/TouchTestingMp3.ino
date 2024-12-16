@@ -14,6 +14,7 @@
     TRACK010.mp3
     TRACK011.mp3
     TRACK012.mp3
+    TRACK013.mp3
 
 *******************************************************************************/
 
@@ -32,9 +33,13 @@
 #include <SFEMP3Shield.h>
 
 // touch constants
-const uint32_t BAUD_RATE = 115200;
+const uint32_t BAUD_RATE = 1000000;
 const uint8_t MPR121_ADDR = 0x5C;
 const uint8_t MPR121_INT = 4;
+
+const unsigned long countdownTime = 300000;   //Em milisegundos, 1 segundo = 1000 mili, 1 minuto = 60000 mili
+unsigned long startTime;
+bool timerActive = true;
 
 // serial monitor behaviour constants
 const bool WAIT_FOR_SERIAL = false;
@@ -126,6 +131,8 @@ void setup() {
     Serial.println(" when trying to start MP3 player");
   }
 
+  startTime = millis();
+
   //MP3player.playTrack(12);
 }
 
@@ -146,6 +153,7 @@ void loop() {
             checkPinTouch(i);
 
             if (cycle == 1) {
+              resetTimer();
               playMP3();
             }
           }
@@ -156,6 +164,7 @@ void loop() {
             checkPinTouch(i);
 
             if (cycle == 11) {
+              resetTimer();
               playMP3();
               cycle = 1;                    //resets the cycle
             }
@@ -167,6 +176,7 @@ void loop() {
             checkPinTouch(i);
 
             if (cycle == 6) {
+              resetTimer();
               playMP3();
             }
           }
@@ -177,6 +187,7 @@ void loop() {
             checkPinTouch(i);
 
             if (cycle == 3) {
+              resetTimer();
               playMP3();
             }
           }
@@ -187,10 +198,12 @@ void loop() {
             checkPinTouch(i);
 
             if (cycle == 2) {
+              resetTimer();
               playMP3();
             }
 
             if (cycle == 10 && MPR121.getTouchData(6)) {      //checks double touch
+              resetTimer();
               playMP3();
             }
           }
@@ -211,10 +224,12 @@ void loop() {
             checkPinTouch(i);
 
             if (cycle == 4) {
+              resetTimer();
               playMP3();
             }
 
             if (cycle == 10 && MPR121.getTouchData(4)) {     //checks double touch
+              resetTimer();
               playMP3();
             }
           }
@@ -225,6 +240,7 @@ void loop() {
             checkPinTouch(i);
 
             if (cycle == 5) {
+              resetTimer();
               playMP3();
             }
           }
@@ -245,6 +261,7 @@ void loop() {
             checkPinTouch(i);
 
             if (cycle == 7) {
+              resetTimer();
               playMP3();
             }
           }
@@ -255,6 +272,7 @@ void loop() {
             checkPinTouch(i);
 
             if (cycle == 8) {
+              resetTimer();
               playMP3();
             }
           }
@@ -265,6 +283,7 @@ void loop() {
             checkPinTouch(i);
 
             if (cycle == 9) {
+              resetTimer();
               playMP3();
             }
           }
@@ -279,13 +298,47 @@ void loop() {
         Serial.print(i);
         Serial.println(" is no longer being touched");
       }
+      
+      if (timerActive) {
+        unsigned long remainingTime = countdownTime - (millis() - startTime);
+        //Serial.print("Time remaining: ");
+        //Serial.println(remainingTime / 1000); // Show in seconds
+      }
+      
+      if (timerActive && (millis() - startTime >= countdownTime)) {
+        timerActive = false;
+        Serial.println("RESET");
+        cycle = 1;                    //resets the cycle
+        break;
+      }
+
+      if(!timerActive){
+        playMP3Reset();
+        break;
+      }
     }
+
+    else { 
+      // ADDED CODE: If the MP3 is playing, stop it if any pin is touched
+      if (pinTouched && !timerActive) {
+        Serial.println("Pin touched while audio is playing! Stopping the track...");
+        MP3player.stopTrack(); // ADDED CODE: Stop the audio
+        break; // ADDED CODE: Exit the for loop to prevent multiple triggers
+      }
+    }
+    
+    delay(20); // Add a slight delay to avoid excessive looping
   }
 
   if (MPR121_DATASTREAM_ENABLE) {
     MPR121_Datastream.update();
   }
+}
 
+void resetTimer() {
+  Serial.println("RESET TIMER");
+  startTime = millis(); // Reset the starting time
+  timerActive = true;   // Reactivate the timer
 }
 
 void playMP3() {                  //Plays the audio track and increments the cycle so the story can flow
@@ -296,6 +349,16 @@ void playMP3() {                  //Plays the audio track and increments the cyc
   Serial.println(cycle - 1);
 
   cycle++;
+
+  delay(10);
+}
+
+void playMP3Reset() {                  //Plays the that resets the flow
+  MP3player.stopTrack();
+  MP3player.playTrack(13);
+
+  Serial.print("Currently playing track number -> ");
+  Serial.println(13);
 
   delay(10);
 }
